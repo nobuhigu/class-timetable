@@ -7,14 +7,33 @@ const URGENT_MS = 24 * 60 * 60 * 1000; // 締め切りまでこれ未満なら�
 
 const STATUS = { present: '出席', late: '遅刻', absent: '欠席', excused: '公欠' };
 
-const DEFAULT_PERIODS = [
-  { start: '09:00', end: '10:30' },
-  { start: '10:40', end: '12:10' },
-  { start: '13:00', end: '14:30' },
-  { start: '14:40', end: '16:10' },
-  { start: '16:20', end: '17:50' },
-  { start: '18:00', end: '19:30' },
-];
+// 設定画面の「時間のプリセット」。先頭が新しい学期の初期値
+const PERIOD_PRESETS = {
+  // 東京大学 標準の105分授業（教養学部の時間割資料より）
+  utokyo: {
+    label: '東京大学（105分授業）',
+    periods: [
+      { start: '08:30', end: '10:15' },
+      { start: '10:25', end: '12:10' },
+      { start: '13:00', end: '14:45' },
+      { start: '14:55', end: '16:40' },
+      { start: '16:50', end: '18:35' },
+      { start: '18:45', end: '20:30' },
+    ],
+  },
+  general90: {
+    label: '一般的な90分授業',
+    periods: [
+      { start: '09:00', end: '10:30' },
+      { start: '10:40', end: '12:10' },
+      { start: '13:00', end: '14:30' },
+      { start: '14:40', end: '16:10' },
+      { start: '16:20', end: '17:50' },
+      { start: '18:00', end: '19:30' },
+    ],
+  },
+};
+const DEFAULT_PERIODS = PERIOD_PRESETS.utokyo.periods;
 
 const $ = (sel) => document.querySelector(sel);
 
@@ -608,14 +627,29 @@ function openSettings() {
 $('#addPeriodBtn').addEventListener('click', () => {
   const rows = document.querySelectorAll('#periodRows .period-row');
   const last = rows[rows.length - 1];
-  let start = '09:00';
-  let end = '10:30';
-  if (last) {
-    const s = toMinutes(last.querySelector('.end').value || '09:00') + 10;
-    start = fromMinutes(s);
-    end = fromMinutes(s + 90);
+  let start = DEFAULT_PERIODS[0].start;
+  let end = DEFAULT_PERIODS[0].end;
+  if (last && last.querySelector('.start').value && last.querySelector('.end').value) {
+    // 直前の時限と同じ長さで、10分休みを空けて追加
+    const prevStart = toMinutes(last.querySelector('.start').value);
+    const prevEnd = toMinutes(last.querySelector('.end').value);
+    start = fromMinutes(prevEnd + 10);
+    end = fromMinutes(prevEnd + 10 + (prevEnd - prevStart));
   }
   $('#periodRows').appendChild(periodRow({ start, end }));
+  numberPeriodRows();
+});
+
+for (const [key, preset] of Object.entries(PERIOD_PRESETS)) {
+  $('#presetSelect').add(new Option(preset.label, key));
+}
+$('#presetSelect').addEventListener('change', (e) => {
+  const preset = PERIOD_PRESETS[e.target.value];
+  e.target.value = '';
+  if (!preset) return;
+  const rows = $('#periodRows');
+  rows.innerHTML = '';
+  preset.periods.forEach((p) => rows.appendChild(periodRow(p)));
   numberPeriodRows();
 });
 
