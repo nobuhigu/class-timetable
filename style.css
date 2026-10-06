@@ -10,6 +10,7 @@
 }
 
 * { box-sizing: border-box; }
+[hidden] { display: none !important; }
 
 body {
   margin: 0;
@@ -50,13 +51,32 @@ button.danger { color: var(--danger); border-color: var(--danger); }
 
 .now {
   margin: 12px 16px 0;
-  padding: 10px 14px;
+  padding: 6px 14px;
   background: var(--card);
   border-radius: 8px;
   border-left: 4px solid var(--accent);
   font-size: 0.95rem;
 }
 .now:empty { display: none; }
+.now-line { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; padding: 4px 0; }
+.now-line + .now-line { border-top: 1px dashed var(--line); }
+.now-line strong { color: var(--accent); }
+.now-line.urgent { color: var(--danger); }
+.now-line button, .now-line .button { padding: 3px 10px; font-size: 0.8rem; }
+a.button { text-decoration: none; display: inline-block; }
+a.zoom { background: #2d8cff; border-color: #2d8cff; color: #fff; }
+
+.count:not(:empty) {
+  display: inline-block;
+  min-width: 1.4em;
+  margin-left: 4px;
+  padding: 0 5px;
+  border-radius: 10px;
+  background: #e8ecf2;
+  font-size: 0.75rem;
+  text-align: center;
+}
+.count.warn:not(:empty) { background: var(--danger); color: #fff; }
 
 main { padding: 12px 16px 24px; overflow-x: auto; }
 
@@ -139,8 +159,70 @@ form input:not([type=checkbox]):not([type=color]), form textarea {
 }
 form input[type=color] { display: block; margin-top: 4px; width: 60px; height: 32px; border: none; padding: 0; }
 
-.counter { display: flex; gap: 6px; align-items: center; margin-top: 4px; }
-.counter input { width: 70px !important; margin: 0 !important; text-align: center; }
+label.inline { display: flex; align-items: center; gap: 6px; color: var(--text); }
+
+.input-with-button { display: flex; gap: 6px; margin-top: 4px; }
+.input-with-button input { margin: 0 !important; flex: 1; min-width: 0; }
+
+/* タブ */
+.tabs { display: flex; gap: 4px; margin-bottom: 14px; border-bottom: 1px solid var(--line); }
+.tabs button {
+  flex: 1;
+  border: none;
+  border-bottom: 3px solid transparent;
+  border-radius: 0;
+  background: none;
+  color: var(--muted);
+  padding: 8px 4px;
+}
+.tabs button:focus { outline: none; }
+.tabs button.active { color: var(--accent); border-bottom-color: var(--accent); font-weight: 600; }
+
+/* 課題 */
+.task-add { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
+.task-add input { margin: 0 !important; }
+.task-add #taskTitle { flex: 1 1 100%; }
+.task-add #taskDue { flex: 1; width: auto !important; min-width: 0; }
+
+.task-list, .attend-list { list-style: none; margin: 0; padding: 0; max-height: 45vh; overflow-y: auto; }
+.task-list li, .attend-list li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 2px;
+  border-bottom: 1px solid var(--line);
+}
+.task-list li.empty, .attend-list li.empty { color: var(--muted); font-size: 0.85rem; justify-content: center; }
+.task-list input[type=checkbox] { width: 20px; height: 20px; flex-shrink: 0; }
+.task-body { flex: 1; min-width: 0; }
+.task-title { font-size: 0.95rem; word-break: break-word; }
+.task-due { font-size: 0.75rem; color: var(--muted); margin-top: 2px; }
+.task-due.warn { color: #d97706; font-weight: 600; }
+.task-due.over { color: var(--danger); font-weight: 600; }
+.task-list li.done .task-title { text-decoration: line-through; color: var(--muted); }
+button.icon { border: none; background: none; color: var(--muted); font-size: 1.1rem; padding: 2px 8px; }
+
+/* 出欠 */
+.attend-summary { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-bottom: 12px; }
+.chip { display: flex; flex-direction: column; align-items: center; padding: 6px 0; border-radius: 8px; font-size: 0.75rem; }
+.chip strong { font-size: 1.2rem; }
+.chip.warn { outline: 2px solid var(--danger); }
+.attend-add { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-bottom: 8px; }
+.attend-add input { width: auto !important; margin: 0 !important; }
+.status-buttons { display: flex; gap: 4px; flex-wrap: wrap; }
+.status-buttons button { padding: 6px 10px; color: var(--s); }
+.status-buttons.small button { padding: 3px 8px; font-size: 0.75rem; }
+.status-buttons button.selected { color: #fff; font-weight: 600; }
+.attend-list .date { width: 5.5em; font-size: 0.9rem; }
+.attend-list .status { flex: 1; font-size: 0.85rem; }
+
+.status-present { --s: #16a34a; }
+.status-late { --s: #d97706; }
+.status-absent { --s: #e5484d; }
+.status-excused { --s: #6366f1; }
+.chip, .status-buttons button.selected { background: color-mix(in srgb, var(--s) 14%, white); color: var(--s); }
+.status-buttons button.selected { background: var(--s); border-color: var(--s); color: #fff; }
+.attend-list .status { color: var(--s); font-weight: 600; }
 
 fieldset { border: 1px solid var(--line); border-radius: 8px; margin: 0 0 12px; padding: 8px 12px 12px; }
 legend { font-size: 0.85rem; color: var(--muted); }
@@ -194,6 +276,7 @@ header { padding-top: max(12px, env(safe-area-inset-top)); }
   .cls .sub { font-size: 0.6rem; margin-top: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .cls .badges { right: 2px; bottom: 2px; gap: 2px; }
   .badge { font-size: 0.55rem; padding: 0 4px; }
+  .badge.minor { display: none; } /* 狭いマスでは課題・欠席だけ出す */
 
   /* ダイアログは下から出るシート風に */
   dialog {
@@ -213,3 +296,6 @@ header { padding-top: max(12px, env(safe-area-inset-top)); }
   .counter button { min-width: 44px; min-height: 40px; }
   .period-row input { font-size: 15px !important; }
 }
+
+.data-buttons { display: flex; gap: 8px; }
+.data-buttons .button { margin: 0; color: var(--text); font-size: 0.9rem; }

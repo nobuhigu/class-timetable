@@ -19,10 +19,9 @@
     <h1>時間割</h1>
     <div class="toolbar">
       <select id="termSelect" title="学期"></select>
+      <button id="tasksBtn">課題<span id="tasksCount" class="count"></span></button>
       <button id="addTermBtn" title="学期を追加">＋学期</button>
       <button id="settingsBtn">設定</button>
-      <button id="exportBtn">書き出し</button>
-      <label class="button">読み込み<input type="file" id="importInput" accept="application/json" hidden></label>
     </div>
   </header>
 
@@ -36,23 +35,62 @@
   <dialog id="classDialog">
     <form method="dialog" id="classForm">
       <h2 id="classDialogTitle"></h2>
-      <label>授業名<input name="courseName" required></label>
-      <label>教室<input name="room"></label>
-      <label>教員<input name="teacher"></label>
-      <label>色<input name="color" type="color" value="#4f8cff"></label>
-      <label>欠席回数
-        <span class="counter">
-          <button type="button" data-step="-1">−</button>
-          <input name="absences" type="number" min="0" value="0">
-          <button type="button" data-step="1">＋</button>
-        </span>
-      </label>
-      <label>メモ（課題・持ち物など）<textarea name="memo" rows="4"></textarea></label>
+      <div class="tabs">
+        <button type="button" data-tab="info">基本情報</button>
+        <button type="button" data-tab="tasks">課題<span id="taskTabCount" class="count"></span></button>
+        <button type="button" data-tab="attend">出欠</button>
+      </div>
+
+      <section data-panel="info">
+        <label>授業名<input name="courseName" required></label>
+        <label>教員<input name="teacher"></label>
+        <label>教室<input name="room"></label>
+        <label>Zoom URL
+          <span class="input-with-button">
+            <input name="zoomUrl" inputmode="url" autocomplete="off" placeholder="https://zoom.us/j/...">
+            <a id="zoomOpen" class="button" target="_blank" rel="noopener">開く</a>
+          </span>
+        </label>
+        <label>色<input name="color" type="color" value="#4f8cff"></label>
+        <label>メモ（持ち物・連絡事項など）<textarea name="memo" rows="3"></textarea></label>
+      </section>
+
+      <section data-panel="tasks" hidden>
+        <div class="task-add">
+          <input id="taskTitle" placeholder="課題名（例：レポート第3回）" autocomplete="off">
+          <input id="taskDue" type="datetime-local" title="締め切り">
+          <button type="button" id="addTaskBtn" class="primary">追加</button>
+        </div>
+        <ul id="taskList" class="task-list"></ul>
+      </section>
+
+      <section data-panel="attend" hidden>
+        <div id="attendSummary" class="attend-summary"></div>
+        <div class="attend-add">
+          <input id="attendDate" type="date">
+          <div class="status-buttons" id="attendButtons"></div>
+        </div>
+        <ul id="attendList" class="attend-list"></ul>
+      </section>
+
       <div class="actions">
         <button type="button" id="deleteClassBtn" class="danger">削除</button>
         <span class="spacer"></span>
-        <button value="cancel" formnovalidate>キャンセル</button>
+        <button type="button" data-close>キャンセル</button>
         <button value="save" class="primary">保存</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- 課題一覧ダイアログ -->
+  <dialog id="tasksDialog">
+    <form method="dialog">
+      <h2>課題一覧</h2>
+      <label class="inline"><input type="checkbox" id="showDoneTasks">完了済みも表示</label>
+      <ul id="allTaskList" class="task-list"></ul>
+      <div class="actions">
+        <span class="spacer"></span>
+        <button class="primary">閉じる</button>
       </div>
     </form>
   </dialog>
@@ -71,10 +109,17 @@
         <div id="periodRows"></div>
         <button type="button" id="addPeriodBtn">＋時限を追加</button>
       </fieldset>
+      <fieldset>
+        <legend>データ（バックアップ・端末間の移動）</legend>
+        <div class="data-buttons">
+          <button type="button" id="exportBtn">書き出し</button>
+          <label class="button">読み込み<input type="file" id="importInput" accept="application/json" hidden></label>
+        </div>
+      </fieldset>
       <div class="actions">
         <button type="button" id="deleteTermBtn" class="danger">この学期を削除</button>
         <span class="spacer"></span>
-        <button value="cancel" formnovalidate>キャンセル</button>
+        <button type="button" data-close>キャンセル</button>
         <button value="save" class="primary">保存</button>
       </div>
     </form>
