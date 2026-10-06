@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#4f8cff">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="時間割">
+  <title>時間割</title>
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" href="icons/icon-192.png">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header>
+    <h1>時間割</h1>
+    <div class="toolbar">
+      <select id="termSelect" title="学期"></select>
+      <button id="addTermBtn" title="学期を追加">＋学期</button>
+      <button id="settingsBtn">設定</button>
+      <button id="exportBtn">書き出し</button>
+      <label class="button">読み込み<input type="file" id="importInput" accept="application/json" hidden></label>
+    </div>
+  </header>
+
+  <section id="now" class="now"></section>
+
+  <main>
+    <table id="timetable"></table>
+  </main>
+
+  <!-- 授業編集ダイアログ -->
+  <dialog id="classDialog">
+    <form method="dialog" id="classForm">
+      <h2 id="classDialogTitle"></h2>
+      <label>授業名<input name="courseName" required></label>
+      <label>教室<input name="room"></label>
+      <label>教員<input name="teacher"></label>
+      <label>色<input name="color" type="color" value="#4f8cff"></label>
+      <label>欠席回数
+        <span class="counter">
+          <button type="button" data-step="-1">−</button>
+          <input name="absences" type="number" min="0" value="0">
+          <button type="button" data-step="1">＋</button>
+        </span>
+      </label>
+      <label>メモ（課題・持ち物など）<textarea name="memo" rows="4"></textarea></label>
+      <div class="actions">
+        <button type="button" id="deleteClassBtn" class="danger">削除</button>
+        <span class="spacer"></span>
+        <button value="cancel" formnovalidate>キャンセル</button>
+        <button value="save" class="primary">保存</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- 設定ダイアログ -->
+  <dialog id="settingsDialog">
+    <form method="dialog" id="settingsForm">
+      <h2>設定</h2>
+      <label>学期名<input name="termName" required></label>
+      <fieldset>
+        <legend>表示する曜日</legend>
+        <div id="dayChecks" class="day-checks"></div>
+      </fieldset>
+      <fieldset>
+        <legend>時限と時間</legend>
+        <div id="periodRows"></div>
+        <button type="button" id="addPeriodBtn">＋時限を追加</button>
+      </fieldset>
+      <div class="actions">
+        <button type="button" id="deleteTermBtn" class="danger">この学期を削除</button>
+        <span class="spacer"></span>
+        <button value="cancel" formnovalidate>キャンセル</button>
+        <button value="save" class="primary">保存</button>
+      </div>
+    </form>
+  </dialog>
+
+  <script src="app.js"></script>
+</body>
+</html>
