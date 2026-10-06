@@ -35,6 +35,16 @@ const PERIOD_PRESETS = {
 };
 const DEFAULT_PERIODS = PERIOD_PRESETS.utokyo.periods;
 
+// 東大で90分授業になる場合の時間（105分の枠の中に収まる）
+const UTOKYO_90 = [
+  { start: '08:30', end: '10:00' },
+  { start: '10:25', end: '11:55' },
+  { start: '13:15', end: '14:45' },
+  { start: '15:10', end: '16:40' },
+  { start: '17:05', end: '18:35' },
+  { start: '19:00', end: '20:30' },
+];
+
 const $ = (sel) => document.querySelector(sel);
 
 function el(tag, className, text) {
@@ -57,7 +67,7 @@ function newTerm(name, base) {
 }
 
 function emptyClass() {
-  return { name: '', room: '', teacher: '', zoomUrl: '', color: '#4f8cff', memo: '', assignments: [], attendance: [] };
+  return { name: '', room: '', teacher: '', zoomUrl: '', color: '#4f8cff', memo: '', start: '', end: '', assignments: [], attendance: [] };
 }
 
 // 古い形式のデータを現在の形式にそろえる
@@ -67,6 +77,8 @@ function normalize(data) {
     for (const c of Object.values(t.classes)) {
       c.zoomUrl ??= '';
       c.memo ??= '';
+      c.start ??= ''; // 空なら時限の時間どおり
+      c.end ??= '';
       if (!Array.isArray(c.assignments)) c.assignments = [];
       if (!Array.isArray(c.attendance)) {
         // 旧バージョンの「欠席回数」は日付不明の欠席記録として引き継ぐ
@@ -131,6 +143,26 @@ function formatDate(ymd) {
   if (!ymd) return '日付不明';
   const d = new Date(`${ymd}T00:00`);
   return `${d.getMonth() + 1}/${d.getDate()}(${DAY_NAMES[d.getDay()]})`;
+}
+
+const minutesBetween = (p) => toMinutes(p.end) - toMinutes(p.start);
+
+// 授業ごとに時間を変えていればそれを、なければ時限の時間を使う
+function classTime(t, key) {
+  const c = t.classes[key];
+  if (c?.start && c?.end) return { start: c.start, end: c.end };
+  return t.periods[Number(key.split('-')[1])];
+}
+
+// その時限で90分授業にしたときの時間
+function ninetyMinutes(p, i) {
+  const u = PERIOD_PRESETS.utokyo.periods[i];
+  if (u && u.start === p.start && u.end === p.end) return UTOKYO_90[i];
+  return { start: p.start, end: fromMinutes(toMinutes(p.start) + 90) };
+}
+
+function isDuring(time, minutes) {
+  return minutes >= toMinutes(time.start) && minutes < toMinutes(time.end);
 }
 
 function nowInfo() {
@@ -231,14 +263,14 @@ function renderTable() {
     th.innerHTML = `<span class="num">${i + 1}</span><span class="time">${p.start}<br>〜${p.end}</span>`;
     row.appendChild(th);
 
-    const isNow = minutes >= toMinutes(p.start) && minutes < toMinutes(p.end);
     for (const day of t.days) {
       const td = row.insertCell();
+      const key = `${day}-${i}`;
       if (day === today) td.classList.add('today');
-      if (day === today && isNow) td.classList.add('current');
+      if (day === today && isDuring(classTime(t, key), minutes)) td.classList.add('current');
       td.addEventListener('click', () => openClassDialog(day, i));
 
-      const c = t.classes[`${day}-${i}`];
+      const c = t.classes[key];
       if (c) td.appendChild(classCell(c));
     }
   });
@@ -253,6 +285,7 @@ function classCell(c) {
   if (sub) div.appendChild(el('div', 'sub', sub));
 
   const badges = el('div', 'badges');
+  if (c.start && c.end) badges.appendChild(badge(`${minutesBetween(c)}分`, false, 'length'));
   const pending = c.assignments.filter((a) => !a.done);
   if (pending.length) {
     badges.appendChild(badge(`課題${pending.length}`, pending.some(isUrgent)));
@@ -303,15 +336,16 @@ function renderNow() {
 
   if (!t.days.includes(day)) return;
 
+  // p は授業ごとの時間を反映したもの
   const todays = t.periods
-    .map((p, i) => ({ p, i, c: t.classes[`${day}-${i}`] }))
+    .map((_, i) => ({ i, c: t.classes[`${day}-${i}`], p: classTime(t, `${day}-${i}`) }))
     .filter((x) => x.c);
   if (!todays.length) {
     box.appendChild(el('div', 'now-line', '今日は授業がありません'));
     return;
   }
 
-  const current = todays.find(({ p }) => minutes >= toMinutes(p.start) && minutes < toMinutes(p.end));
+  const current = todays.find(({ p }) => isDuring(p, minutes));
   const next = todays.find(({ p }) => toMinutes(p.start) > minutes);
   const desc = ({ p, i, c }) => `${i + 1}限 ${c.name}${c.room ? `（${c.room}）` : ''} ${p.start}〜${p.end}`;
 
@@ -382,6 +416,7 @@ function openClassDialog(day, periodIndex) {
   classForm.color.value = draft.color;
   classForm.memo.value = draft.memo;
   updateZoomOpen();
+  setupTimeOptions(periodIndex);
 
   $('#taskTitle').value = '';
   $('#taskDue').value = '';
@@ -403,10 +438,63 @@ function updateZoomOpen() {
 }
 classForm.zoomUrl.addEventListener('input', updateZoomOpen);
 
-classDialog.addEventListener('close', () => {
-  if (classDialog.returnValue !== 'save') return;
+// --- 授業時間（時限どおり／90分／時刻指定） ---
+
+let timeChoices = {}; // 選択肢ごとの時間。custom は入力欄から読む
+
+function setupTimeOptions(periodIndex) {
+  const p = term().periods[periodIndex];
+  const n90 = ninetyMinutes(p, periodIndex);
+  timeChoices = { period: p, 90: n90 };
+
+  const sel = classForm.timeMode;
+  sel.innerHTML = '';
+  sel.add(new Option(`${minutesBetween(p)}分（${p.start}〜${p.end}）`, 'period'));
+  if (minutesBetween(p) !== 90) sel.add(new Option(`90分（${n90.start}〜${n90.end}）`, '90'));
+  sel.add(new Option('時刻を指定', 'custom'));
+
+  const same = (a) => a && a.start === draft.start && a.end === draft.end;
+  sel.value = !draft.start ? 'period' : same(n90) && minutesBetween(p) !== 90 ? '90' : same(p) ? 'period' : 'custom';
+  classForm.startTime.value = draft.start || p.start;
+  classForm.endTime.value = draft.end || p.end;
+  updateCustomTime();
+}
+
+function updateCustomTime() {
+  const custom = classForm.timeMode.value === 'custom';
+  $('#customTime').hidden = !custom;
+  classForm.startTime.required = custom;
+  classForm.endTime.required = custom;
+}
+
+classForm.timeMode.addEventListener('change', updateCustomTime);
+for (const input of [classForm.startTime, classForm.endTime]) {
+  input.addEventListener('input', () => classForm.endTime.setCustomValidity(''));
+}
+
+// 保存する時間。時限どおりなら空にして、あとで時限の時間を変えても追従させる
+function selectedTime() {
+  const mode = classForm.timeMode.value;
+  if (mode === 'period') return { start: '', end: '' };
+  if (mode === 'custom') return { start: classForm.startTime.value, end: classForm.endTime.value };
+  return { ...timeChoices[mode] };
+}
+
+// 保存は submit の時点で行う（close イベントは遅れて届くことがあり、
+// その間に別の授業を開くと returnValue がリセットされて保存漏れになるため）
+classForm.addEventListener('submit', (e) => {
+  if (e.submitter?.value !== 'save') return;
+  // 終了が開始より前なら保存させない
+  if (classForm.timeMode.value === 'custom' && classForm.startTime.value >= classForm.endTime.value) {
+    e.preventDefault();
+    switchTab('info');
+    classForm.endTime.setCustomValidity('終了時刻は開始時刻より後にしてください');
+    classForm.endTime.reportValidity();
+    return;
+  }
   term().classes[editingKey] = {
     ...draft,
+    ...selectedTime(),
     name: classForm.courseName.value.trim(),
     teacher: classForm.teacher.value.trim(),
     room: classForm.room.value.trim(),
@@ -653,8 +741,8 @@ $('#presetSelect').addEventListener('change', (e) => {
   numberPeriodRows();
 });
 
-settingsDialog.addEventListener('close', () => {
-  if (settingsDialog.returnValue !== 'save') return;
+settingsForm.addEventListener('submit', (e) => {
+  if (e.submitter?.value !== 'save') return;
   const t = term();
   t.name = settingsForm.termName.value.trim() || t.name;
   const order = [1, 2, 3, 4, 5, 6, 0];

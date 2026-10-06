@@ -301,3 +301,8 @@ header { padding-top: max(12px, env(safe-area-inset-top)); }
 .data-buttons .button { margin: 0; color: var(--text); font-size: 0.9rem; }
 
 .preset-select { display: block; width: 100%; margin-bottom: 10px; }
+
+.block-select { display: block; width: 100%; margin-top: 4px; }
+.time-range { display: flex; align-items: center; gap: 6px; margin: -4px 0 10px; }
+.time-range input { width: auto !important; margin: 0 !important; }
+.badge.length { background: #e0ecff; color: var(--accent); }

@@ -45,6 +45,12 @@
         <label>授業名<input name="courseName" required></label>
         <label>教員<input name="teacher"></label>
         <label>教室<input name="room"></label>
+        <label>授業時間
+          <select name="timeMode" class="block-select"></select>
+        </label>
+        <div id="customTime" class="time-range" hidden>
+          <input name="startTime" type="time"> 〜 <input name="endTime" type="time">
+        </div>
         <label>Zoom URL
           <span class="input-with-button">
             <input name="zoomUrl" inputmode="url" autocomplete="off" placeholder="https://zoom.us/j/...">
