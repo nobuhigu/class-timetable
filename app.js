@@ -217,13 +217,74 @@ function safeUrl(url) {
   return /^(https?|zoommtg|zoomus):/i.test(u) ? u : '';
 }
 
-function zoomLink(c, text = 'Zoom') {
-  const a = el('a', 'button zoom', text);
-  a.href = safeUrl(c.zoomUrl);
-  a.target = '_blank';
-  a.rel = 'noopener';
-  a.addEventListener('click', (e) => e.stopPropagation());
-  return a;
+// https://xxx.zoom.us/j/123?pwd=abc → zoommtg://xxx.zoom.us/join?action=join&confno=123&pwd=abc
+// 変換できない形式（/my/ の個人URLなど）は null
+function zoomAppUrl(webUrl) {
+  if (/^(zoommtg|zoomus):/i.test(webUrl)) return webUrl;
+  let u;
+  try { u = new URL(webUrl); } catch { return null; }
+  if (!/(^|\.)zoom\.us$/i.test(u.hostname)) return null;
+  const m = u.pathname.match(/^\/j\/(\d+)/);
+  if (!m) return null;
+  const params = new URLSearchParams({ action: 'join', confno: m[1] });
+  const pwd = u.searchParams.get('pwd');
+  if (pwd) params.set('pwd', pwd);
+  return `zoommtg://${u.hostname}/join?${params}`;
+}
+
+// Zoomアプリを直接起動する。アプリが無いときのためにブラウザで開く案内も出す
+function launchZoom(url) {
+  const web = safeUrl(url);
+  if (!web) return;
+  const app = zoomAppUrl(web);
+  if (!app) {
+    window.open(web, '_blank', 'noopener');
+    return;
+  }
+  location.href = app;
+  if (/^https?:/i.test(web)) showToast('Zoomが起動しない場合は', 'ブラウザで開く', web);
+}
+
+const ZOOM_ICON = '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M3 7.5A2.5 2.5 0 0 1 5.5 5h8A2.5 2.5 0 0 1 16 7.5v1.7l4.2-2.8a.5.5 0 0 1 .8.4v10.4a.5.5 0 0 1-.8.4L16 14.8v1.7a2.5 2.5 0 0 1-2.5 2.5h-8A2.5 2.5 0 0 1 3 16.5z"/></svg>';
+
+// URLが無いときは灰色で押せないボタンになる
+function zoomButton(url, label = 'Zoom', className = 'zoom-btn') {
+  const b = el('button', className);
+  b.type = 'button';
+  b.innerHTML = ZOOM_ICON;
+  if (label) b.appendChild(el('span', '', label));
+  setZoomButton(b, url);
+  b.addEventListener('click', (e) => {
+    e.stopPropagation(); // マスのクリック（編集画面を開く）を止める
+    launchZoom(b.dataset.url);
+  });
+  return b;
+}
+
+function setZoomButton(b, url) {
+  const ok = safeUrl(url);
+  b.disabled = !ok;
+  b.dataset.url = ok;
+  b.title = ok ? 'Zoomアプリで参加' : 'Zoom URLが登録されていません';
+}
+
+let toastTimer = null;
+function showToast(text, linkText, href) {
+  const t = $('#toast');
+  // モーダル表示中はダイアログが最前面になるので、その中に移して見えるようにする
+  (document.querySelector('dialog[open]') ?? document.body).appendChild(t);
+  t.innerHTML = '';
+  t.appendChild(el('span', '', text));
+  if (linkText) {
+    const a = el('a', '', linkText);
+    a.href = href;
+    a.target = '_blank';
+    a.rel = 'noopener';
+    t.appendChild(a);
+  }
+  t.hidden = false;
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => { t.hidden = true; }, 8000);
 }
 
 // ---------- 描画 ----------
@@ -279,6 +340,8 @@ function renderTable() {
 function classCell(c) {
   const div = el('div', 'cls');
   div.style.setProperty('--c', c.color);
+  // 狭いマスなので、URLがある授業だけアイコンのボタンを出す
+  if (safeUrl(c.zoomUrl)) div.appendChild(zoomButton(c.zoomUrl, '', 'zoom-icon'));
   div.appendChild(el('div', 'name', c.name));
 
   const sub = [c.room, c.teacher].filter(Boolean).join(' / ');
@@ -292,7 +355,6 @@ function classCell(c) {
   }
   const absent = attendanceCounts(c).absent;
   if (absent > 0) badges.appendChild(badge(`欠${absent}`, absent >= ABSENCE_WARN));
-  if (safeUrl(c.zoomUrl)) badges.appendChild(badge('Zoom', false, 'minor'));
   if (c.memo) badges.appendChild(badge('メモ', false, 'minor'));
   div.appendChild(badges);
   return div;
@@ -353,7 +415,7 @@ function renderNow() {
     const line = el('div', 'now-line');
     line.appendChild(el('strong', '', '授業中'));
     line.appendChild(el('span', '', desc(current)));
-    if (safeUrl(current.c.zoomUrl)) line.appendChild(zoomLink(current.c));
+    line.appendChild(zoomButton(current.c.zoomUrl));
     line.appendChild(quickAttendance(current.c));
     box.appendChild(line);
   }
@@ -361,7 +423,7 @@ function renderNow() {
     const line = el('div', 'now-line');
     line.appendChild(el('strong', '', '次'));
     line.appendChild(el('span', '', `${desc(next)}（あと${toMinutes(next.p.start) - minutes}分）`));
-    if (safeUrl(next.c.zoomUrl)) line.appendChild(zoomLink(next.c));
+    line.appendChild(zoomButton(next.c.zoomUrl));
     box.appendChild(line);
   }
   if (!current && !next) box.appendChild(el('div', 'now-line', '今日の授業は終わりました'));
@@ -430,11 +492,12 @@ function openClassDialog(day, periodIndex) {
   classDialog.showModal();
 }
 
+// ダイアログ上部の「Zoomで参加」は入力中のURLに合わせて押せる／押せないを切り替える
+const dialogZoomBtn = zoomButton('', 'Zoomで参加');
+$('#classDialogZoom').appendChild(dialogZoomBtn);
+
 function updateZoomOpen() {
-  const url = safeUrl(classForm.zoomUrl.value);
-  const a = $('#zoomOpen');
-  a.hidden = !url;
-  a.href = url || '#';
+  setZoomButton(dialogZoomBtn, classForm.zoomUrl.value);
 }
 classForm.zoomUrl.addEventListener('input', updateZoomOpen);
 

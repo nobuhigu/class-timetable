@@ -64,7 +64,64 @@ button.danger { color: var(--danger); border-color: var(--danger); }
 .now-line.urgent { color: var(--danger); }
 .now-line button, .now-line .button { padding: 3px 10px; font-size: 0.8rem; }
 a.button { text-decoration: none; display: inline-block; }
-a.zoom { background: #2d8cff; border-color: #2d8cff; color: #fff; }
+
+/* Zoom */
+.zoom-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: #2d8cff;
+  border-color: #2d8cff;
+  color: #fff;
+  font-weight: 600;
+}
+.zoom-btn svg { width: 16px; height: 16px; }
+.zoom-btn:hover:not(:disabled) { background: #1a73e8; }
+.zoom-btn:disabled, .zoom-icon:disabled {
+  background: #e4e7eb;
+  border-color: #e4e7eb;
+  color: #a0a6ad;
+  cursor: not-allowed;
+}
+.zoom-icon {
+  position: absolute;
+  top: 3px;
+  right: 3px;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  display: grid;
+  place-items: center;
+  border: none;
+  border-radius: 50%;
+  background: #2d8cff;
+  color: #fff;
+}
+.zoom-icon svg { width: 13px; height: 13px; }
+.cls:has(.zoom-icon) .name { padding-right: 20px; }
+
+.dialog-head { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; }
+.dialog-head h2 { margin: 0; flex: 1; }
+
+.toast {
+  position: fixed;
+  left: 50%;
+  bottom: calc(16px + env(safe-area-inset-bottom));
+  transform: translateX(-50%);
+  z-index: 10;
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  width: max-content;
+  max-width: calc(100vw - 24px);
+  padding: 10px 16px;
+  border-radius: 10px;
+  background: #222;
+  color: #fff;
+  font-size: 0.85rem;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+}
+.toast a { color: #8ab8ff; font-weight: 600; white-space: nowrap; }
 
 .count:not(:empty) {
   display: inline-block;
@@ -161,8 +218,6 @@ form input[type=color] { display: block; margin-top: 4px; width: 60px; height: 3
 
 label.inline { display: flex; align-items: center; gap: 6px; color: var(--text); }
 
-.input-with-button { display: flex; gap: 6px; margin-top: 4px; }
-.input-with-button input { margin: 0 !important; flex: 1; min-width: 0; }
 
 /* タブ */
 .tabs { display: flex; gap: 4px; margin-bottom: 14px; border-bottom: 1px solid var(--line); }

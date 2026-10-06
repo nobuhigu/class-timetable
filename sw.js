@@ -1,7 +1,7 @@
 'use strict';
 
 // ファイルを更新したらこの番号を上げる
-const CACHE = 'timetable-v4';
+const CACHE = 'timetable-v5';
 const ASSETS = [
   './',
   './index.html',

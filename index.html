@@ -34,7 +34,10 @@
   <!-- 授業編集ダイアログ -->
   <dialog id="classDialog">
     <form method="dialog" id="classForm">
-      <h2 id="classDialogTitle"></h2>
+      <div class="dialog-head">
+        <h2 id="classDialogTitle"></h2>
+        <span id="classDialogZoom"></span>
+      </div>
       <div class="tabs">
         <button type="button" data-tab="info">基本情報</button>
         <button type="button" data-tab="tasks">課題<span id="taskTabCount" class="count"></span></button>
@@ -51,12 +54,7 @@
         <div id="customTime" class="time-range" hidden>
           <input name="startTime" type="time"> 〜 <input name="endTime" type="time">
         </div>
-        <label>Zoom URL
-          <span class="input-with-button">
-            <input name="zoomUrl" inputmode="url" autocomplete="off" placeholder="https://zoom.us/j/...">
-            <a id="zoomOpen" class="button" target="_blank" rel="noopener">開く</a>
-          </span>
-        </label>
+        <label>Zoom URL<input name="zoomUrl" inputmode="url" autocomplete="off" placeholder="https://zoom.us/j/..."></label>
         <label>色<input name="color" type="color" value="#4f8cff"></label>
         <label>メモ（持ち物・連絡事項など）<textarea name="memo" rows="3"></textarea></label>
       </section>
@@ -133,6 +131,8 @@
       </div>
     </form>
   </dialog>
+
+  <div id="toast" class="toast" hidden></div>
 
   <script src="app.js"></script>
 </body>
