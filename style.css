@@ -65,19 +65,21 @@ button.danger { color: var(--danger); border-color: var(--danger); }
 .now-line button, .now-line .button { padding: 3px 10px; font-size: 0.8rem; }
 a.button { text-decoration: none; display: inline-block; }
 
-/* Zoom */
-.zoom-btn {
+/* Zoom・UTOL ボタン */
+.link-btn {
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  background: #2d8cff;
-  border-color: #2d8cff;
+  background: var(--b);
+  border-color: var(--b);
   color: #fff;
   font-weight: 600;
 }
-.zoom-btn svg { width: 16px; height: 16px; }
-.zoom-btn:hover:not(:disabled) { background: #1a73e8; }
-.zoom-btn:disabled, .zoom-icon:disabled {
+.link-btn.zoom { --b: #2d8cff; }
+.link-btn.utol { --b: #1f3a68; }
+.link-btn svg { width: 16px; height: 16px; }
+.link-btn:hover:not(:disabled) { filter: brightness(0.92); background: var(--b); }
+.link-btn:disabled, .zoom-icon:disabled {
   background: #e4e7eb;
   border-color: #e4e7eb;
   color: #a0a6ad;
@@ -361,3 +363,26 @@ header { padding-top: max(12px, env(safe-area-inset-top)); }
 .time-range { display: flex; align-items: center; gap: 6px; margin: -4px 0 10px; }
 .time-range input { width: auto !important; margin: 0 !important; }
 .badge.length { background: #e0ecff; color: var(--accent); }
+
+.dialog-links { display: flex; gap: 6px; }
+.dialog-links .link-btn { padding: 6px 10px; }
+
+.move-warn { color: #d97706; font-size: 0.8rem; font-weight: 600; }
+
+/* キャンパス選択 */
+.field { margin-bottom: 10px; }
+.field-label { display: block; font-size: 0.85rem; color: var(--muted); margin-bottom: 4px; }
+.segmented { display: flex; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+.segmented label { flex: 1; margin: 0; }
+.segmented input { position: absolute; opacity: 0; pointer-events: none; }
+.segmented span {
+  display: block;
+  padding: 8px 0;
+  text-align: center;
+  color: var(--text);
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+.segmented label + label span { border-left: 1px solid var(--line); }
+.segmented input:checked + span { background: var(--accent); color: #fff; font-weight: 600; }
+.segmented input:focus-visible + span { outline: 2px solid var(--accent); outline-offset: -2px; }

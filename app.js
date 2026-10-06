@@ -6,6 +6,7 @@ const ABSENCE_WARN = 3; // この回数以上の欠席で警告表示
 const URGENT_MS = 24 * 60 * 60 * 1000; // 締め切りまでこれ未満なら強調
 
 const STATUS = { present: '出席', late: '遅刻', absent: '欠席', excused: '公欠' };
+const CAMPUSES = ['駒場', '本郷'];
 
 // 設定画面の「時間のプリセット」。先頭が新しい学期の初期値
 const PERIOD_PRESETS = {
@@ -67,7 +68,10 @@ function newTerm(name, base) {
 }
 
 function emptyClass() {
-  return { name: '', room: '', teacher: '', zoomUrl: '', color: '#4f8cff', memo: '', start: '', end: '', assignments: [], attendance: [] };
+  return {
+    name: '', campus: '', room: '', teacher: '', zoomUrl: '', utolUrl: '', color: '#4f8cff', memo: '',
+    start: '', end: '', assignments: [], attendance: [],
+  };
 }
 
 // 古い形式のデータを現在の形式にそろえる
@@ -76,6 +80,8 @@ function normalize(data) {
     t.classes ??= {};
     for (const c of Object.values(t.classes)) {
       c.zoomUrl ??= '';
+      c.utolUrl ??= '';
+      c.campus ??= '';
       c.memo ??= '';
       c.start ??= ''; // 空なら時限の時間どおり
       c.end ??= '';
@@ -247,25 +253,42 @@ function launchZoom(url) {
 
 const ZOOM_ICON = '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M3 7.5A2.5 2.5 0 0 1 5.5 5h8A2.5 2.5 0 0 1 16 7.5v1.7l4.2-2.8a.5.5 0 0 1 .8.4v10.4a.5.5 0 0 1-.8.4L16 14.8v1.7a2.5 2.5 0 0 1-2.5 2.5h-8A2.5 2.5 0 0 1 3 16.5z"/></svg>';
 
+const UTOL_ICON = '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M4 4.5A1.5 1.5 0 0 1 5.5 3H11v16H5.5A1.5 1.5 0 0 1 4 17.5zM13 3h5.5A1.5 1.5 0 0 1 20 4.5v13a1.5 1.5 0 0 1-1.5 1.5H13zM6 21h12v-1H6z"/></svg>';
+
+const LINK_KINDS = {
+  zoom: {
+    icon: ZOOM_ICON,
+    open: launchZoom,
+    ok: 'Zoomアプリで参加',
+    ng: 'Zoom URLが登録されていません',
+  },
+  utol: {
+    icon: UTOL_ICON,
+    open: (url) => window.open(url, '_blank', 'noopener'),
+    ok: 'UTOLの授業ページを開く',
+    ng: 'UTOLのリンクが登録されていません',
+  },
+};
+
 // URLが無いときは灰色で押せないボタンになる
-function zoomButton(url, label = 'Zoom', className = 'zoom-btn') {
+function linkButton(kind, url, label, className = `link-btn ${kind}`) {
   const b = el('button', className);
   b.type = 'button';
-  b.innerHTML = ZOOM_ICON;
+  b.innerHTML = LINK_KINDS[kind].icon;
   if (label) b.appendChild(el('span', '', label));
-  setZoomButton(b, url);
+  setLinkButton(b, kind, url);
   b.addEventListener('click', (e) => {
     e.stopPropagation(); // マスのクリック（編集画面を開く）を止める
-    launchZoom(b.dataset.url);
+    LINK_KINDS[kind].open(b.dataset.url);
   });
   return b;
 }
 
-function setZoomButton(b, url) {
+function setLinkButton(b, kind, url) {
   const ok = safeUrl(url);
   b.disabled = !ok;
   b.dataset.url = ok;
-  b.title = ok ? 'Zoomアプリで参加' : 'Zoom URLが登録されていません';
+  b.title = ok ? LINK_KINDS[kind].ok : LINK_KINDS[kind].ng;
 }
 
 let toastTimer = null;
@@ -341,10 +364,11 @@ function classCell(c) {
   const div = el('div', 'cls');
   div.style.setProperty('--c', c.color);
   // 狭いマスなので、URLがある授業だけアイコンのボタンを出す
-  if (safeUrl(c.zoomUrl)) div.appendChild(zoomButton(c.zoomUrl, '', 'zoom-icon'));
+  if (safeUrl(c.zoomUrl)) div.appendChild(linkButton('zoom', c.zoomUrl, '', 'zoom-icon'));
   div.appendChild(el('div', 'name', c.name));
 
-  const sub = [c.room, c.teacher].filter(Boolean).join(' / ');
+  const place = [c.campus, c.room].filter(Boolean).join(' ');
+  const sub = [place, c.teacher].filter(Boolean).join(' / ');
   if (sub) div.appendChild(el('div', 'sub', sub));
 
   const badges = el('div', 'badges');
@@ -409,13 +433,17 @@ function renderNow() {
 
   const current = todays.find(({ p }) => isDuring(p, minutes));
   const next = todays.find(({ p }) => toMinutes(p.start) > minutes);
-  const desc = ({ p, i, c }) => `${i + 1}限 ${c.name}${c.room ? `（${c.room}）` : ''} ${p.start}〜${p.end}`;
+  const desc = ({ p, i, c }) => {
+    const place = [c.campus, c.room].filter(Boolean).join(' ');
+    return `${i + 1}限 ${c.name}${place ? `（${place}）` : ''} ${p.start}〜${p.end}`;
+  };
 
   if (current) {
     const line = el('div', 'now-line');
     line.appendChild(el('strong', '', '授業中'));
     line.appendChild(el('span', '', desc(current)));
-    line.appendChild(zoomButton(current.c.zoomUrl));
+    line.appendChild(linkButton('zoom', current.c.zoomUrl, 'Zoom'));
+    line.appendChild(linkButton('utol', current.c.utolUrl, 'UTOL'));
     line.appendChild(quickAttendance(current.c));
     box.appendChild(line);
   }
@@ -423,7 +451,13 @@ function renderNow() {
     const line = el('div', 'now-line');
     line.appendChild(el('strong', '', '次'));
     line.appendChild(el('span', '', `${desc(next)}（あと${toMinutes(next.p.start) - minutes}分）`));
-    line.appendChild(zoomButton(next.c.zoomUrl));
+    line.appendChild(linkButton('zoom', next.c.zoomUrl, 'Zoom'));
+    line.appendChild(linkButton('utol', next.c.utolUrl, 'UTOL'));
+    // 直前の授業とキャンパスが違えば移動を知らせる
+    const prev = todays.filter(({ p }) => toMinutes(p.end) <= toMinutes(next.p.start)).pop();
+    if (prev?.c.campus && next.c.campus && prev.c.campus !== next.c.campus) {
+      line.appendChild(el('span', 'move-warn', `キャンパス移動あり（${prev.c.campus}→${next.c.campus}）`));
+    }
     box.appendChild(line);
   }
   if (!current && !next) box.appendChild(el('div', 'now-line', '今日の授業は終わりました'));
@@ -462,6 +496,16 @@ function switchTab(name) {
 classForm.querySelectorAll('[data-tab]').forEach((b) => {
   b.addEventListener('click', () => switchTab(b.dataset.tab));
 });
+for (const name of CAMPUSES) {
+  const label = el('label');
+  const radio = el('input');
+  radio.type = 'radio';
+  radio.name = 'campus';
+  radio.value = name;
+  label.append(radio, el('span', '', name));
+  $('#campusChoices').appendChild(label);
+}
+
 // 他のタブを開いたまま授業名が空で保存したとき、入力欄を見えるようにする
 classForm.courseName.addEventListener('invalid', () => switchTab('info'));
 
@@ -475,9 +519,11 @@ function openClassDialog(day, periodIndex) {
   classForm.teacher.value = draft.teacher;
   classForm.room.value = draft.room;
   classForm.zoomUrl.value = draft.zoomUrl;
+  classForm.utolUrl.value = draft.utolUrl;
+  classForm.campus.value = draft.campus;
   classForm.color.value = draft.color;
   classForm.memo.value = draft.memo;
-  updateZoomOpen();
+  updateLinkButtons();
   setupTimeOptions(periodIndex);
 
   $('#taskTitle').value = '';
@@ -492,14 +538,17 @@ function openClassDialog(day, periodIndex) {
   classDialog.showModal();
 }
 
-// ダイアログ上部の「Zoomで参加」は入力中のURLに合わせて押せる／押せないを切り替える
-const dialogZoomBtn = zoomButton('', 'Zoomで参加');
-$('#classDialogZoom').appendChild(dialogZoomBtn);
+// ダイアログ上部のZoom・UTOLボタンは入力中のURLに合わせて押せる／押せないを切り替える
+const dialogZoomBtn = linkButton('zoom', '', 'Zoomで参加');
+const dialogUtolBtn = linkButton('utol', '', 'UTOL');
+$('#classDialogLinks').append(dialogZoomBtn, dialogUtolBtn);
 
-function updateZoomOpen() {
-  setZoomButton(dialogZoomBtn, classForm.zoomUrl.value);
+function updateLinkButtons() {
+  setLinkButton(dialogZoomBtn, 'zoom', classForm.zoomUrl.value);
+  setLinkButton(dialogUtolBtn, 'utol', classForm.utolUrl.value);
 }
-classForm.zoomUrl.addEventListener('input', updateZoomOpen);
+classForm.zoomUrl.addEventListener('input', updateLinkButtons);
+classForm.utolUrl.addEventListener('input', updateLinkButtons);
 
 // --- 授業時間（時限どおり／90分／時刻指定） ---
 
@@ -562,6 +611,8 @@ classForm.addEventListener('submit', (e) => {
     teacher: classForm.teacher.value.trim(),
     room: classForm.room.value.trim(),
     zoomUrl: classForm.zoomUrl.value.trim(),
+    utolUrl: classForm.utolUrl.value.trim(),
+    campus: classForm.campus.value,
     color: classForm.color.value,
     memo: classForm.memo.value,
   };

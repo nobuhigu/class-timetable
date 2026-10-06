@@ -36,7 +36,7 @@
     <form method="dialog" id="classForm">
       <div class="dialog-head">
         <h2 id="classDialogTitle"></h2>
-        <span id="classDialogZoom"></span>
+        <span id="classDialogLinks" class="dialog-links"></span>
       </div>
       <div class="tabs">
         <button type="button" data-tab="info">基本情報</button>
@@ -47,6 +47,12 @@
       <section data-panel="info">
         <label>授業名<input name="courseName" required></label>
         <label>教員<input name="teacher"></label>
+        <div class="field">
+          <span class="field-label">キャンパス</span>
+          <div class="segmented" id="campusChoices">
+            <label><input type="radio" name="campus" value="" checked><span>未設定</span></label>
+          </div>
+        </div>
         <label>教室<input name="room"></label>
         <label>授業時間
           <select name="timeMode" class="block-select"></select>
@@ -55,6 +61,7 @@
           <input name="startTime" type="time"> 〜 <input name="endTime" type="time">
         </div>
         <label>Zoom URL<input name="zoomUrl" inputmode="url" autocomplete="off" placeholder="https://zoom.us/j/..."></label>
+        <label>UTOL 授業ページのURL<input name="utolUrl" inputmode="url" autocomplete="off" placeholder="https://utol.ecc.u-tokyo.ac.jp/..."></label>
         <label>色<input name="color" type="color" value="#4f8cff"></label>
         <label>メモ（持ち物・連絡事項など）<textarea name="memo" rows="3"></textarea></label>
       </section>
